@@ -71,7 +71,7 @@ class FFmpegConstructor:
             'escaped_path'   : '',
             'exists'         : False
         }
-        
+
         self.separator = f'{chr(92)}:{chr(92)}{chr(92)}'
         self.escaped_logo_path = ''
 
@@ -80,28 +80,28 @@ class FFmpegConstructor:
         self.sub['exists'] = True
         self.sub['name'] = os.path.basename(self.sub['path'])
         self.sub['sanitized_name'] = str(self.sub['name']).replace('[', '').replace(']', '')
-        os.makedirs(self.config.main_paths['temp'], exist_ok=True)
-        self.sub['temp_path'] = os.path.join(self.config.main_paths['temp'], self.sub['sanitized_name'])
+        os.makedirs(self.config.main_paths.temp, exist_ok=True)
+        self.sub['temp_path'] = os.path.join(self.config.main_paths.temp, self.sub['sanitized_name'])
         shutil.copyfile(self.sub['path'], self.sub['temp_path'])
         self.sub['escaped_path'] = f"{str(self.sub['temp_path']).replace(chr(92), '/').replace(':/', self.separator)}"
-    
-    def logo_escaper(self):
-        self.escaped_logo_path = f"{str(self.config.main_paths['logo']).replace(chr(92), '/').replace(':/', self.separator)}"
 
-    def build_soft_command(self, raw_path='', sound_path='', sub_path=None, 
-                            output_path='', nvenc=False, crf_rate='18', cqmin='17', 
-                            cq='18', cqmax='25', max_bitrate='', max_buffer='', video_profile='main', 
+    def logo_escaper(self):
+        self.escaped_logo_path = f"{str(self.config.main_paths.logo).replace(chr(92), '/').replace(':/', self.separator)}"
+
+    def build_soft_command(self, raw_path='', sound_path='', sub_path=None,
+                            output_path='', nvenc=False, crf_rate='18', cqmin='17',
+                            cq='18', cqmax='25', max_bitrate='', max_buffer='', video_profile='main',
                             profile_level='4.2', pixel_format='yuv420p', preset='faster', tune='animation',
                             include_logo=True, potato_mode=False):
-        
-        os.chdir(self.config.main_paths['CWD'])
-        
+
+        os.chdir(self.config.main_paths.cwd)
+
         if sub_path and os.path.exists(sub_path):
             self.sub_escaper(sub_path)
         self.logo_escaper()
         command_parts = [self.softsub_ffmpeg_commands['init']]
-        
-        cmds = ['override output', 
+
+        cmds = ['override output',
                 'video input',
                 'audio input',
                 'subtitle input' if self.sub['exists'] else '',
@@ -118,7 +118,7 @@ class FFmpegConstructor:
                 'video max bitrate' ,
                 'video max bufsize' ,
                 'render preset' ,
-                'video tune' if not potato_mode else '',   
+                'video tune' if not potato_mode else '',
                 'video profile',
                 'video pixel format',
                 'audio codec',
@@ -127,7 +127,7 @@ class FFmpegConstructor:
                 'subtitle codec' if self.sub['exists'] else '',
                 'video output'
             ]#'profile level',
-        
+
         for command in cmds:
             if command:
                 command_parts.append(self.softsub_ffmpeg_commands[command])
@@ -155,15 +155,15 @@ class FFmpegConstructor:
         )
         self.config.logging_module.write_to_log('FFmpegConstructor', 'build_soft_command', f'FFmpeg constructor softsub: {str_out}')
         return str_out
-    
-    def build_hard_command(self, raw_path='', sound_path='', sub_path=None, 
-                            output_path='', nvenc=False, crf_rate='18', cqmin='17', 
-                            cq='18', cqmax='25', max_bitrate='', max_buffer='', preset='faster', tune='animation', video_profile='main', 
-                            profile_level='4.2', pixel_format='yuv420p', 
+
+    def build_hard_command(self, raw_path='', sound_path='', sub_path=None,
+                            output_path='', nvenc=False, crf_rate='18', cqmin='17',
+                            cq='18', cqmax='25', max_bitrate='', max_buffer='', preset='faster', tune='animation', video_profile='main',
+                            profile_level='4.2', pixel_format='yuv420p',
                             include_logo=True, potato_mode=False):
-        
-        os.chdir(self.config.main_paths['CWD'])
-        
+
+        os.chdir(self.config.main_paths.cwd)
+
         if sub_path and os.path.exists(sub_path):
             self.sub_escaper(sub_path)
         self.logo_escaper()
@@ -175,7 +175,7 @@ class FFmpegConstructor:
             burning = '1burning'
         else:
             burning = ''
-        cmds = ['override output', 
+        cmds = ['override output',
                 'video input',
                 'audio input' if sound_path else '',
                 'video map',
@@ -195,7 +195,7 @@ class FFmpegConstructor:
                 'audio discretization' if sound_path else '',
                 'video output'
             ]#'profile level',
-        
+
         for command in cmds:
             if command:
                 command_parts.append(self.hardsub_ffmpeg_commands[command])
@@ -224,7 +224,7 @@ class FFmpegConstructor:
         )
         self.config.logging_module.write_to_log('FFmpegConstructor', 'build_hard_command', f'FFmpeg constructor hardsub: {str_out}')
         return str_out
-    
+
     def remove_temp_sub(self):
         if os.path.exists(self.sub['temp_path']):
             os.remove(self.sub['temp_path'])

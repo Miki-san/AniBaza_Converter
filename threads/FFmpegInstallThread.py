@@ -31,7 +31,7 @@ class FFmpegInstallThread(QThread):
             # Запуск установки через батник
             self.process = subprocess.Popen(
                 ["ffmpeginstall.bat"],
-                cwd=os.getcwd(),
+                cwd=os.getcwd(), # Why this doesn't use config.main_paths.cwd?
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,  # Декодируем вывод в текст (Python 3.7+)
@@ -49,7 +49,7 @@ class FFmpegInstallThread(QThread):
                             percent = int(match.group(1))  # Преобразуем в int
                             self.progress_signal.emit(f"Скачивание FFmpeg... {percent}%")
                         self.config.log('FFmpegInstallThread', 'run', line)
-                    
+
                     if self.cancel_install:
                         if hasattr(self, "process") and self.process:
                             self.process.terminate()
