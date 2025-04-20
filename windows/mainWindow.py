@@ -26,7 +26,7 @@ class MainWindow(QMainWindow):
         self.threadMain = None
         self.faqWindow = None
         self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)  
+        self.ui.setupUi(self)
         self.set_buttons()
         self.set_checkboxes()
         self.set_textboxes()
@@ -55,7 +55,7 @@ class MainWindow(QMainWindow):
             AUTHOR = self.config.app_info['author']
         ))
         self.setWindowTitle(self.config.app_info['title'])
-    
+
     def handle_exception(self, exc_type, exc_value, exc_traceback):
         if issubclass(exc_type, KeyboardInterrupt):
             # Для прерываний типа Ctrl+C
@@ -64,7 +64,7 @@ class MainWindow(QMainWindow):
         error_message = ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
         self.config.log('mainWindow', 'handle_exception', f"Handled exception: {error_message}")
         self.ui.app_state_label.setText("ОШИБКА! См. лог файлы.")
-    
+
     def showEvent(self, event):
         super().showEvent(event)
         if self.config.first_show:  # Проверяем, был ли уже вызван showEvent
@@ -74,13 +74,13 @@ class MainWindow(QMainWindow):
                 self.updater_ui.start_updater()
             else:
                 self.config.log('mainWindow', 'showEvent', "Updater disabled.")
-    
+
     def universal_update(self, setting_path, value, log_message, type, post_operation=None):
         keys = setting_path.split('.')
         setting = self.config
         for key in keys[:-1]:
             if isinstance(setting, dict):
-                setting = setting.setdefault(key, {})  
+                setting = setting.setdefault(key, {})
             else:
                 setting = getattr(setting, key, None)
         last_key = keys[-1]
@@ -88,7 +88,7 @@ class MainWindow(QMainWindow):
             setting[last_key] = value
         else:
             setattr(setting, last_key, value)
-            
+
         if log_message:
             if type == "checkbox":
                 self.config.log('mainWindow', 'universal_update', log_message.format(VALUE="enabled" if value else "disabled"))
@@ -96,42 +96,42 @@ class MainWindow(QMainWindow):
                 self.config.log('mainWindow', 'universal_update', log_message.format(VALUE=value))
             elif type == "combobox":
                 self.config.log('mainWindow', 'universal_update', log_message)
-        
+
         post_operation() if post_operation else None
-        
+
     def universal_setter(self, ui, value, log_message, type, post_operation=None):
         match type:
             case "checkbox":
                 ui.setChecked(value)
                 self.config.log('mainWindow', 'universal_setter', log_message.format(VALUE="enabled" if value else "disabled"))
-        
+
         post_operation() if post_operation else None
-        
+
     # Softsub path updater
     def soft_path_constructor(self):
-        if '[AniBaza]' in self.config.main_paths['softsub']:
-            self.config.build_settings['episode_name'] = self.config.main_paths['softsub'].split('/')[-1]
+        if '[AniBaza]' in self.config.main_paths.softsub:
+            self.config.build_settings['episode_name'] = self.config.main_paths.softsub.split('/')[-1]
             self.config.build_settings['episode_name'] = self.config.build_settings['episode_name'].replace(
-                self.config.build_settings['episode_name'][self.config.build_settings['episode_name'].rfind('[')+1 : 
+                self.config.build_settings['episode_name'][self.config.build_settings['episode_name'].rfind('[')+1 :
                 self.config.build_settings['episode_name'].rfind(']')],''
             ) if '[' in self.config.build_settings['episode_name'] else self.config.build_settings['episode_name']
             self.ui.episode_line.setText(self.config.build_settings['episode_name'])
         else:
-            self.config.log('mainWindow', 'soft_path_constructor', f"Softsub base path updated to: {self.config.main_paths['softsub']}")
+            self.config.log('mainWindow', 'soft_path_constructor', f"Softsub base path updated to: {self.config.main_paths.softsub}")
         self.update_render_paths()
-        
+
     def update_render_paths(self):
-        self.config.rendering_paths['softsub'] = f"{self.config.main_paths['softsub']}/{self.config.build_settings['episode_name']}.mkv"
+        self.config.rendering_paths['softsub'] = f"{self.config.main_paths.softsub}/{self.config.build_settings['episode_name']}.mkv"
         self.config.log('mainWindow', 'update_render_paths', f"Softsub render path updated to: {self.config.rendering_paths['softsub']}")
-        self.config.rendering_paths['hardsub'] = f"{self.config.main_paths['hardsub']}/{self.config.build_settings['episode_name']}.mp4"
+        self.config.rendering_paths['hardsub'] = f"{self.config.main_paths.hardsub}/{self.config.build_settings['episode_name']}.mp4"
         self.config.log('mainWindow', 'update_render_paths', f"Hardsub render path updated to: {self.config.rendering_paths['hardsub']}")
         self.config.log('mainWindow', 'update_render_paths', 'Render paths updated!')
 
     def lock_mode(self):
         ui_for_disable = (
-            self.ui.audio_path_editline, 
-            self.ui.audio_path_open_button, 
-            self.ui.softsub_path_editline, 
+            self.ui.audio_path_editline,
+            self.ui.audio_path_open_button,
+            self.ui.softsub_path_editline,
             self.ui.softsub_path_open_button
         )
         for ui in ui_for_disable:
@@ -163,7 +163,7 @@ class MainWindow(QMainWindow):
 
         for button, handler in buttons.items():
             button.clicked.connect(handler)
-        
+
         self.config.log('mainWindow', 'set_buttons', "Buttons set.")
 
     # Checkboxes definition
@@ -171,12 +171,12 @@ class MainWindow(QMainWindow):
         checkboxes = {
             self.ui.dev_mode_enable: (
                 lambda: self.universal_update(
-                    'dev_settings.dev_mode', 
-                    self.ui.dev_mode_enable.isChecked(), 
+                    'dev_settings.dev_mode',
+                    self.ui.dev_mode_enable.isChecked(),
                     "Dev mode {VALUE}.",
                     "checkbox",
                     lambda: self.ui.log_mode_enable.setEnabled(self.config.dev_settings['dev_mode'])
-                ), 
+                ),
                 lambda: self.universal_setter(
                     self.ui.dev_mode_enable,
                     self.config.dev_settings['dev_mode'],
@@ -186,11 +186,11 @@ class MainWindow(QMainWindow):
             ),
             self.ui.log_mode_enable: (
                 lambda: self.universal_update(
-                    'dev_settings.logging.state', 
-                    self.ui.log_mode_enable.isChecked(), 
+                    'dev_settings.logging.state',
+                    self.ui.log_mode_enable.isChecked(),
                     "Logging mode {VALUE}.",
                     "checkbox"
-                ), 
+                ),
                 lambda: self.universal_setter(
                     self.ui.log_mode_enable,
                     self.config.dev_settings['logging']['state'],
@@ -200,7 +200,7 @@ class MainWindow(QMainWindow):
             ),
             self.ui.app_ffmpeg_update_check: (
                 lambda: self.universal_update(
-                    'update_search', 
+                    'update_search',
                     self.ui.app_ffmpeg_update_check.isChecked(),
                     "Update search {VALUE}.",
                     "checkbox"
@@ -214,7 +214,7 @@ class MainWindow(QMainWindow):
             ),
             self.ui.potatoPC_check: (
                 lambda: self.universal_update(
-                    'potato_PC', 
+                    'potato_PC',
                     self.ui.potatoPC_check.isChecked(),
                     "Potato PC {VALUE}.",
                     "checkbox"
@@ -236,19 +236,19 @@ class MainWindow(QMainWindow):
     def set_textboxes(self):
         paths = {
             self.ui.audio_path_editline: lambda: self.universal_update(
-                'rendering_paths.audio', 
+                'rendering_paths.audio',
                 self.ui.audio_path_editline.text(),
                 "Audio path updated to: {VALUE}.",
                 "textbox"
             ),
             self.ui.raw_path_editline: lambda: self.universal_update(
-                'rendering_paths.raw', 
+                'rendering_paths.raw',
                 self.ui.raw_path_editline.text(),
                 "Raw path updated to: {VALUE}.",
                 "textbox"
             ),
             self.ui.subtitle_path_editline: lambda: self.universal_update(
-                'rendering_paths.sub', 
+                'rendering_paths.sub',
                 self.ui.subtitle_path_editline.text(),
                 "Subtitle path updated to: {VALUE}.",
                 "textbox"
@@ -278,7 +278,7 @@ class MainWindow(QMainWindow):
     def set_comboboxes(self):
         comboboxes = {
             self.ui.render_mode_box: lambda: self.universal_update(
-                'build_settings.build_state', 
+                'build_settings.build_state',
                 self.ui.render_mode_box.currentIndex(),
                 "Build state updated to: {VALUE}.".format(
                     VALUE=self.ui.render_mode_box.currentText()
@@ -287,7 +287,7 @@ class MainWindow(QMainWindow):
                 self.lock_mode
             ),
             self.ui.logo_box: lambda: self.universal_update(
-                'build_settings.logo_state', 
+                'build_settings.logo_state',
                 self.ui.logo_box.currentIndex(),
                 "Logo state updated to: {VALUE}.".format(
                     VALUE=self.ui.logo_box.currentText()
@@ -296,7 +296,7 @@ class MainWindow(QMainWindow):
                 None
             ),
             self.ui.nvenc_box: lambda: self.universal_update(
-                'build_settings.nvenc_state', 
+                'build_settings.nvenc_state',
                 self.ui.nvenc_box.currentIndex(),
                 "NVENC state updated to: {VALUE}.".format(
                     VALUE=self.ui.nvenc_box.currentText()
@@ -312,42 +312,55 @@ class MainWindow(QMainWindow):
         self.ui.render_mode_box.setCurrentIndex(self.config.build_settings['build_state'])
         self.ui.logo_box.setCurrentIndex(self.config.build_settings['logo_state'])
         self.ui.nvenc_box.setCurrentIndex(self.config.build_settings['nvenc_state'])
+        if not self.config.ffmpeg.nvenc:
+            self.ui.nvenc_box.setCurrentIndex(3)
+            self.ui.nvenc_box.hide()
+            self.ui.nvenc_label.setText('NVENC: Не доступен')
+
         self.config.log('mainWindow', 'set_comboboxes', "Comboboxes set.")
+
+    def open_file(self, filename):
+        if self.config.pc_info.is_windows():
+            os.startfile(filename)
+            return
+
+        opener = "open" if self.config.pc_info.Platform == "darwin" else "xdg-open"
+        subprocess.call([opener, filename])
 
     # Open hardsub directory
     def open_hardsub(self):
-        if os.path.exists(self.config.main_paths['hardsub']):
-            os.startfile(self.config.main_paths['hardsub'])
+        if os.path.exists(self.config.main_paths.hardsub):
+            self.open_file(self.config.main_paths.hardsub)
         else:
             self.coding_error('hardsub_folder')
         self.config.log('mainWindow', 'open_hardsub', "Hardsub folder opened.")
-        
+
     def open_logsdir(self):
-        if os.path.exists(self.config.main_paths['logs']):
-            os.startfile(self.config.main_paths['logs'])
+        if os.path.exists(self.config.main_paths.logs):
+            self.open_file(self.config.main_paths.logs)
         else:
             self.coding_error('logs_folder')
         self.config.log('mainWindow', 'open_logsdir', "Logs folder opened.")
 
     # Softsub saving path
     def soft_folder_path(self):
-        self.config.main_paths['softsub'] = QtWidgets.QFileDialog.getExistingDirectory(self, 'Куда пихать софт?')
-        self.ui.softsub_path_editline.setText(self.config.main_paths['softsub'])
-        self.config.log('mainWindow', 'soft_folder_path', f"Softsub path updated to: {self.config.main_paths['softsub']}")
+        self.config.main_paths.softsub = QtWidgets.QFileDialog.getExistingDirectory(self, 'Куда пихать софт?')
+        self.ui.softsub_path_editline.setText(self.config.main_paths.softsub)
+        self.config.log('mainWindow', 'soft_folder_path', f"Softsub path updated to: {self.config.main_paths.softsub}")
 
     # Raw video choose
     def raw_folder_path(self):
-        self.config.main_paths['raw'], _ = QtWidgets.QFileDialog.getOpenFileName(self, "Где брать равку?", "",
+        self.config.main_paths.raw, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Где брать равку?", "",
                                                             "ALL (*.mkv *.mp4 *.avi)")
-        self.ui.raw_path_editline.setText(self.config.main_paths['raw'])
-        self.config.log('mainWindow', 'raw_folder_path', f"Raw path updated to: {self.config.main_paths['raw']}")
+        self.ui.raw_path_editline.setText(self.config.main_paths.raw)
+        self.config.log('mainWindow', 'raw_folder_path', f"Raw path updated to: {self.config.main_paths.raw}")
 
     # Sound file choose
     def sound_folder_path(self):
-        self.config.main_paths['audio'], _ = QtWidgets.QFileDialog.getOpenFileName(self, "Где брать звук?", "",
+        self.config.main_paths.audio, _ = QtWidgets.QFileDialog.getOpenFileName(self, "Где брать звук?", "",
                                                             "All(*.wav *.flac *.aac *.m4a *.mka)")
-        self.ui.audio_path_editline.setText(self.config.main_paths['audio'])
-        self.config.log('mainWindow', 'sound_folder_path', f"Sound path updated to: {self.config.main_paths['audio']}")
+        self.ui.audio_path_editline.setText(self.config.main_paths.audio)
+        self.config.log('mainWindow', 'sound_folder_path', f"Sound path updated to: {self.config.main_paths.audio}")
 
     # Subtitle choose
     def sub_folder_path(self):
@@ -402,14 +415,14 @@ class MainWindow(QMainWindow):
     def state_update(self, state):
         self.config.log('mainWindow', 'state_update', f"State updated: {state}")
         self.ui.app_state_label.setText(state)
-        
+
     def elapsed_time_update(self, time):
         self.config.log('mainWindow', 'elapsed_time_update', f"Elapsed time updated: {time}")
         self.ui.elapsed_time_label.setText(time)
 
     # Thread start with ffmpeg
     def ffmpeg_thread(self):
-        if not os.path.exists(self.config.main_paths['hardsub']):
+        if not os.path.exists(self.config.main_paths.hardsub):
             self.coding_error('hardsub_folder')
             return
 
@@ -428,7 +441,7 @@ class MainWindow(QMainWindow):
             self.coding_error('subtitle')
             return
 
-        if not os.path.exists(self.config.main_paths['softsub']) and self.config.build_settings['build_state'] in [0, 1, 4]:
+        if not os.path.exists(self.config.main_paths.softsub) and self.config.build_settings['build_state'] in [0, 1, 4]:
             self.coding_error('softsub')
             return
 
@@ -450,14 +463,17 @@ class MainWindow(QMainWindow):
 
     # Kill ffmpeg process
     def proc_kill(self):
-        os.chdir(self.config.main_paths['CWD'])
+        os.chdir(self.config.main_paths.cwd)
         self.finish_message = True
-        subprocess.run('taskkill /f /im ffmpeg.exe', shell=True)
+        if self.config.pc_info.is_windows():
+            subprocess.run('taskkill /f /im ffmpeg.exe', shell=True)
+        else:
+            subprocess.run('kill $(pgrep ffmpeg)', shell=True)
         self.config.log('mainWindow', 'proc_kill', "Killed ffmpeg process")
 
     # After coding
     def finished(self):
-        os.chdir(self.config.main_paths['CWD'])
+        os.chdir(self.config.main_paths.cwd)
         self.ui.render_start_button.show()
         self.ui.render_stop_button.hide()
 
@@ -478,7 +494,7 @@ class MainWindow(QMainWindow):
     def locker(self, lock_value):
         for item in self.base:
             item.setDisabled(lock_value)
-        
+
         tabs = [self.ui.folder_tab, self.ui.settings_tab, self.ui.whats_new_tab, self.ui.dev_tab]
         for tab in tabs:
             tab.setDisabled(lock_value)

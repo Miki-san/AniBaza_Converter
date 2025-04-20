@@ -2,9 +2,11 @@
 /.venv/
 /.vscode/
 /.idea/
-/__pycache__/
+**/__pycache__/
 /AppBuilder/
 /HARDSUB/
 /logs/
 /tests/
 /tmp/
+*.log
+.DS_Store
