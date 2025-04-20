@@ -5,9 +5,8 @@ import sys
 import traceback
 import requests
 
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QMessageBox, QApplication, QMainWindow, QProgressDialog, QPushButton
-from PyQt5.QtCore import Qt, pyqtSignal, QThread, QMetaObject
+from PyQt5.QtWidgets import QMessageBox,QProgressDialog, QPushButton
+from PyQt5.QtCore import Qt, pyqtSignal, QThread
 
 from threads.DownloaderThread import DownloadThread
 from threads.FFmpegInstallThread import FFmpegInstallThread
@@ -22,49 +21,28 @@ class UpdaterThread(QThread):
         super().__init__()
         sys.excepthook = self.handle_exception
         self.config = config
-    
+
     def handle_exception(self, e):
         error_message = ''.join(traceback.format_exception(type(e), e, e.__traceback__))
         self.config.log('AppUpdater', 'handle_exception', f"UpdaterThread Exception: {error_message}")
         self.error_signal.emit(e)
-    
+
     def run(self):
         try:
             self.config.log('AppUpdater', 'run', "Running updater...")
-            
+
             self.config.log('AppUpdater', 'run', "Checking for app updates...")
             app_latest_version, download_url, name = self.check_for_app_update()
             if app_latest_version:
                 self.app_update_signal.emit(app_latest_version, download_url, name)
             else:
                 self.config.log('AppUpdater', 'run', "Checking for ffmpeg updates...")
-                ffmpeg_need_to_update, ffmpeg_latest_version, ffmpeg_installed_version = self.update_ffmpeg()
+                ffmpeg_need_to_update, ffmpeg_latest_version, ffmpeg_installed_version = self.should_update_ffmpeg()
                 if ffmpeg_need_to_update:
                     self.ffmpeg_update_signal.emit(ffmpeg_latest_version, ffmpeg_installed_version)
-                
-        except Exception as e:
-            self.handle_exception(e)
 
-    def get_installed_ffmpeg_version(self):
-        try:
-            if not os.path.exists("C:\\ffmpeg\\bin\\ffmpeg.exe"):
-                return '0.0'
-            else:
-                process = subprocess.Popen(
-                    "ffmpeg -version", 
-                    stdout=subprocess.PIPE, 
-                    stderr=subprocess.PIPE, 
-                    shell=True, 
-                    encoding='utf-8', 
-                    errors='replace'
-                )
-                output, _ = process.communicate()
-                match = re.search(r'ffmpeg\s+version\s+([0-9]+\.[0-9]+(?:\.[0-9]+)?)', output)
-                self.config.log('AppUpdater', 'get_installed_ffmpeg_version', f"Installed FFmpeg version: {match.group(1) if match else None}")
-                return match.group(1) if match else None
         except Exception as e:
             self.handle_exception(e)
-        return None
 
     def get_latest_ffmpeg_version(self):
         try:
@@ -82,8 +60,9 @@ class UpdaterThread(QThread):
             self.handle_exception(e)
         return None
 
-    def update_ffmpeg(self):
-        installed_version = self.get_installed_ffmpeg_version()
+    def should_update_ffmpeg(self):
+        installed_version = self.config.ffmpeg.version or '0.0'
+        self.config.log('AppUpdater', 'get_installed_ffmpeg_version', f"Installed FFmpeg version: {installed_version}")
         latest_version = self.get_latest_ffmpeg_version()
         if latest_version and installed_version and latest_version > installed_version:
             return True, latest_version, installed_version
@@ -109,7 +88,7 @@ class UpdaterUI:
     def __init__(self, main_window, config):
         self.main_window = main_window
         self.config = config
-    
+
     def start_updater(self):
         self.config.log('AppUpdater', 'start_updater', "Starting updater...")
         self.config.updater_thread = UpdaterThread(self.config)
@@ -117,7 +96,7 @@ class UpdaterUI:
         self.config.updater_thread.ffmpeg_update_signal.connect(self.show_ffmpeg_update_dialog)
         self.config.updater_thread.error_signal.connect(self.show_error_dialog)
         self.config.updater_thread.start()
-        
+
     def universal_message_box(self, icon, title, text, infotext, buttons, log_message=None):
         self.config.log('AppUpdater', 'universal_message_box', log_message) if log_message else None
         msg_box = QMessageBox()
@@ -127,13 +106,13 @@ class UpdaterUI:
         msg_box.setInformativeText(infotext)
         msg_box.setStandardButtons(buttons)
         return msg_box.exec()
-    
+
     def cancel_app_download(self):
         if hasattr(self.config, 'download_thread'):
             self.config.log('AppUpdater', 'cancel_app_download', "Download canceled.")
             self.config.download_thread.cancel()  # type: ignore # Останавливаем скачивание
             self.progress.close()  # Закрываем прогресс-диалог
-    
+
     def app_update_progress(self, value):
         self.progress.setValue(value)
         if self.progress.wasCanceled():  # Проверка на отмену скачивания
@@ -147,20 +126,20 @@ class UpdaterUI:
             self.config.log('AppUpdater', 'app_download_finished', "Starting installer...")
             subprocess.Popen([path], shell=True)
             self.main_window.close()
-    
+
     def start_app_download(self, url, version):
         self.config.log('AppUpdater', 'start_app_download', 'Starting download...')
         self.progress = QProgressDialog(
-            f"Скачиваю обновление...\n{self.config.app_info['version_number']} -> {version}", 
-            "Отмена", 
-            0, 100, 
+            f"Скачиваю обновление...\n{self.config.app_info['version_number']} -> {version}",
+            "Отмена",
+            0, 100,
             self.main_window
         )
         self.progress.setWindowTitle("ABCUpdater")
         self.progress.setWindowFlags(self.progress.windowFlags() & ~Qt.WindowType.WindowContextHelpButtonHint) # type: ignore
         self.progress.setMinimumWidth(350)
         self.progress.setWindowModality(Qt.WindowModality.ApplicationModal)
-        
+
         self.cancel_button = QPushButton('Отмена', self.progress)
         self.cancel_button.clicked.connect(self.cancel_app_download)
         self.progress.setCancelButton(self.cancel_button)
@@ -174,7 +153,7 @@ class UpdaterUI:
         self.config.download_thread.finished_signal.connect(self.app_download_finished)
         self.config.download_thread.error_signal.connect(self.show_error_dialog)
         self.config.download_thread.start()
-        
+
     def cancel_ffmpeg_installation(self):
         if hasattr(self.config, "ffmpeg_thread"):
             self.config.ffmpeg_thread.cancel()
@@ -186,13 +165,13 @@ class UpdaterUI:
             QMessageBox.information(self.main_window, "Установка завершена", "FFmpeg успешно установлен!")
         else:
             QMessageBox.warning(self.main_window, "Отмена", "Установка FFmpeg была отменена.")
-    
+
     def start_ffmpeg_installation(self):
         self.config.log('AppUpdater', 'start_ffmpeg_installation', "Starting FFmpeg installation...")
         self.progress = QProgressDialog(
-            "Устанавливаю FFmpeg...", 
-            "Отмена", 
-            0, 0, 
+            "Устанавливаю FFmpeg...",
+            "Отмена",
+            0, 0,
             self.main_window
         )
         self.progress.setWindowTitle("FFmpeg Установка")
@@ -221,20 +200,27 @@ class UpdaterUI:
         self.config.log('AppUpdater', 'show_app_update_dialog', f"User chose to update: {result == QMessageBox.StandardButton.Yes}")
         if result == QMessageBox.StandardButton.Yes:
             self.start_app_download(download_url, latest_version)
-    
+
     def show_ffmpeg_update_dialog(self, latest_version, installed_version):
+        buttons = QMessageBox.StandardButtons(QMessageBox.StandardButton.Yes) | QMessageBox.StandardButtons(QMessageBox.StandardButton.No)
+        message = "Вы хотите скачать и установить новую версию?"
+
+        if not self.config.pc_info.is_windows():
+            message = "Пожалуйста, обновите FFmpeg самостоятельно"
+            buttons = QMessageBox.StandardButtons(QMessageBox.StandardButton.Ok)
+
         result = self.universal_message_box(
             QMessageBox.Icon.Information,
             "FFmpegUpdater",
             f"Доступна новая версия FFmpeg: {installed_version} -> {latest_version}!",
-            "Вы хотите скачать и установить новую версию?",
-            QMessageBox.StandardButtons(QMessageBox.StandardButton.Yes) | QMessageBox.StandardButtons(QMessageBox.StandardButton.No),
+            message,
+            buttons,
             "Необходимо обновление FFmpeg!"
         )
         self.config.log('AppUpdater', 'show_ffmpeg_update_dialog', f"User chose to update: {result == QMessageBox.StandardButton.Yes}")
         if result == QMessageBox.StandardButton.Yes:
             self.start_ffmpeg_installation()
-    
+
     def show_error_dialog(self, ex):
         self.universal_message_box(
             QMessageBox.Icon.Warning,
